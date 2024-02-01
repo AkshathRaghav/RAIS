@@ -1,0 +1,15 @@
+venv/
+venv/bin/
+venv/lib/
+venv/include/
+venv/lib64/
+data/
+__pycache__/
+__pycache__/*.pyc
+__pycache__/*.pyo
+*.log
+
+pmaskformer/
+tf-maskformer/
+assets/
+

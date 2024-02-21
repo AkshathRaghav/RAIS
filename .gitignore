@@ -13,3 +13,9 @@ pmaskformer/
 tf-maskformer/
 assets/
 
+src/.cache
+src/.*
+
+docs/
+logs/
+tmp/

@@ -34,30 +34,33 @@ class Node:
         for child in self.children:
             del child
 
-def build_tree_from_paths(paths):
-    root = Node(path="", node_type="folder")
+class Tree: 
+    def __init__(self, **repo_data):
+        self.tree = self.make_tree(**repo_data)
     
-    for path in paths:
-        path_parts = path.split('/')
-        root.find_or_create_path(path_parts)
-    
-    return root
 
-def serialize_tree_to_file(root, file_path):
-    with open(file_path, 'w', encoding='utf-8') as file:
-        json.dump(root.to_dict(), file, ensure_ascii=False, indent=4)
+    def build_tree_from_paths(self, paths):
+        root = Node(path="", node_type="folder")
+        
+        for path in paths:
+            path_parts = path.split('/')
+            root.find_or_create_path(path_parts)
+        
+        return root
 
-def get_tree(repo_name): 
-    api = HfApi()
-    return api.list_repo_files(repo_name)
+    def serialize_tree_to_file(self, root, file_path):
+        with open(file_path, 'w', encoding='utf-8') as file:
+            json.dump(root.to_dict(), file, ensure_ascii=False, indent=4)
 
-def make_tree(repo, file_path=None):
-  root_node = build_tree_from_paths(get_tree(repo)) 
+    def get_tree(self, repo_name): 
+        api = HfApi()
+        return api.list_repo_files(repo_name)
 
-  if not file_path:
-    return root_node.to_dict()
-  else: 
-    serialize_tree_to_file(root_node, file_path)
+    def make_tree(self, repo, file_path=None):
+        root_node = build_tree_from_paths(get_tree(repo)) 
 
+        if not file_path:
+            return root_node.to_dict()
+        else: 
+            serialize_tree_to_file(root_node, file_path)
 
-# make_tree('vikhyatk/moondream1')

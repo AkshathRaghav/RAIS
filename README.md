@@ -47,6 +47,16 @@
   ```
 
 ## Using the data 
+Follow this repository structure: 
+```
+  # - depot/
+  #   - papers/
+  #     - authors/
+  #   - repository/
+  #     - owner/
+  #     - organization/ 
+  #     - member/
+```
 1. `depot/mapping.json` contains the file_paths of everything related to a project 
 2. `depot/repostory` will contain folders in the form of 
     - `{owner_name}_{repo_name}`/
@@ -61,16 +71,16 @@
 
 ## Using the code
 
-1. Under src/, I've listed some testing files under 'experiment.*' alias. You can use those to get started. 
-2. Under src/backend/, I've modularized the component files.
-    - evaluator/ contains the files for extracting 
-    - tools/ contains other files for functions like logging and storing
-3. src/backend/evaluator/github/github.py contains extra code and functions which can be used on a Github object to 
+1. Under `src/`, I've listed some testing files under `experiment.*` alias. You can use those to get started. 
+2. Under `src/backend/`, I've modularized the component files.
+    - `evaluator/` contains the files for extracting all data 
+    - `tools/` contains other files for functions like logging and storing
+3. `src/backend/evaluator/github/github.py` contains extra code and functions which can be used on a Github object to 
     - Find any files 
     - Extract the code of the files from the web 
     - Extract all the lexical components of python files 
     - Extract Markdown file headers
     - etc. 
   I'm using them for evaluating the pipeline. 
-4. src/backend/evaluator/huggingface is not complete. It can only extract file tree for now. 
-5. src/backend/evaluator/paper gets all the metadata I found important. A lot of the extracted data might be overheads unrelated to a specific project being scraped, but I believe there could be a use for them later. 
+4. `src/backend/evaluator/huggingface` is not complete. It can only extract file tree for now. 
+5. `src/backend/evaluator/paper` gets all the metadata I found important. A lot of the extracted data might be overheads unrelated to a specific project being scraped, but I believe there could be a use for them later. 

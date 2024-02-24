@@ -22,6 +22,16 @@ db = [
 ]
 
 for entry in db: 
+
+  # Ensure you've either downloaded from depot/ folder from the drive or have the below structure setup 
+  # - depot/
+  #   - papers/
+  #     - authors/
+  #   - repository/
+  #     - owner/
+  #     - organization/ 
+  #     - member/
+
   depot = Depot(
     root_path='../depot', 
     paper_path='../depot/papers',

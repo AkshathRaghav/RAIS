@@ -1,47 +1,125 @@
 from backend.evaluator.repository.github.tree import Tree
 from backend.evaluator.repository.github.metadata import Metadata
-
-import requests, re
+from backend.tools.depot import Depot   
+import requests, re, os, json
+from backend.tools.logger import LoggerSetup  
 
 class Github: 
-    def __init__(self, owner, repo, branch):
+    def __init__(self, owner, repo, branch, depot: Depot):  
+        logging_setup = LoggerSetup('Github')
+        self.logger = logging_setup.get_logger()
+
         self.owner = owner
         self.repo = repo
         self.branch = branch
-        self.tree = None 
-        self.metadata = None
+        
+        if (owner, repo, branch) in [(x['owner'], x['repo'], x['branch']) for x in depot.mapping.values() if x]:
+            self.logger.info('Repository already processed. Skipping...')
+            return
+
+        self.tree_object = None 
+        self.metadata_object = None
+
+        self.logger.info('Github object created for %s/%s/%s', owner, repo, branch)
 
     @property
-    def file_tree(self):
-        return self.tree.tree
-    
+    def tree(self):
+        return self.tree_object.tree
+
     @property
-    def repo_data(self):
+    def metadata(self):
         return { 
-            'commit_history': self.metadata.root_metadata['commit_data'],
-            'owner': self.metadata.owner_metadata,
-            'organization': self.metadata.organization_metadata,
-            'members': self.metadata.member_metadata,
-            'metadata': {key: value for key, value in self.metadata.root_metadata.items() if key != 'commit_data'}
+            'commit_history': [
+                list(x) for x in 
+                zip(
+                    self.metadata_object.root_metadata['commit_name'], 
+                    self.metadata_object.root_metadata['commit_date']
+                    )
+            ],
+            'owner': self.metadata_object.owner_metadata,
+            'organization': self.metadata_object.organization_metadata,
+            'members': self.metadata_object.member_metadata,
+            'metadata': {key: value for key, value in self.metadata_object.root_metadata.items() if key != 'commit_name' or key != 'commit_date'}
         }
-    
-    def get_tree(self, file_path=None):
-        self.tree = Tree(owner=self.owner, repo=self.repo, branch=self.branch, file_path=file_path)
+        
+    def __str__(self): 
+        return str(self.tree_object)
 
-    def get_meta(self): 
-        self.metadata = Metadata(owner=self.owner, repo=self.repo)
+    def save(self, path): 
+        sub_repo_path = os.path.join(path, self.owner+'_'+self.repo)
+        os.makedirs(sub_repo_path, exist_ok=True)
+
+        self.logger.info('Saving tree...')
+        with open(os.path.join(sub_repo_path, 'tree.json'), 'w') as file:
+            json.dump(self.tree, file)
+        self.logger.info('Tree saved.')
+
+        self.logger.info('Saving metadata...')
+        with open(os.path.join(sub_repo_path, 'metadata.json'), 'w') as file:
+            json.dump(self.metadata['metadata'], file)
+        self.logger.info('Metadata saved.')
+
+        self.logger.info('Saving commit history...')
+        with open(os.path.join(sub_repo_path, 'commit_history.json'), 'w') as file:
+            json.dump(self.metadata['commit_history'], file)
+        self.logger.info('Commit history saved.')
+
+        self.logger.info('Saving tree (formatted)...')
+        with open(os.path.join(sub_repo_path, 'tree_formatted.txt'), 'w') as file:
+            file.write(str(self.tree_object))
+        self.logger.info('Tree (formatted) saved.')
+
+        for key in ['owner', 'organization']:
+            os.makedirs(os.path.join(path, key), exist_ok=True)
+            if self.metadata[key]: 
+                self.logger.info(f'Saving {key}...')
+                with open(os.path.join(path, key, f'{self.metadata[key]["name"]}.json'), 'w') as file:
+                    json.dump(self.metadata[key], file)
+                self.logger.info(f'{key.capitalize()} saved.')
+
+        key = 'members'
+        os.makedirs(os.path.join(path, key), exist_ok=True)
+        self.logger.info(f'Saving {key}...')
+        for member in self.metadata['members']: 
+            with open(os.path.join(path, key, f'{member}.json'), 'w') as file:
+                json.dump(self.metadata[key][member], file)
+            self.logger.info(f'{member} saved.')
+        self.logger.info(f'Saved {key}...')
+
+        return { 
+            'repo': self.repo,
+            'branch': self.branch,
+            'tree': os.path.join(sub_repo_path, 'tree.json'),
+            'metadata': os.path.join(sub_repo_path, 'metadata.json'),
+            'commit_history': os.path.join(sub_repo_path, 'commit_history.json'),
+            'tree_formatted': os.path.join(sub_repo_path, 'tree_formatted.txt'),
+            'owner': os.path.join(path, 'owner', f'{self.metadata['owner']["name"]}.json'),
+            'organization': os.path.join(path, 'organization', f'{self.metadata['organization']["name"]}.json') if self.metadata['organization'] else None,
+            'members': [os.path.join(path, 'members', f'{member}.json') for member in self.metadata['members']]
+        }
+            
+
+    def get_tree(self, file_path=None):
+        self.tree_object = Tree(owner=self.owner, repo=self.repo, branch=self.branch, file_path=file_path)
+
+    def get_meta(self):
+        for _, _ in self.aget_meta():
+            pass 
+
+    def aget_meta(self): 
+        self.metadata_object = Metadata(owner=self.owner, repo=self.repo)
+        return self.metadata_object.agenerate()
 
     def find_md_files(self):
-        # Ensure we match .md files at the end of each line in the multiline string
         pattern = re.compile(r'^.*\.md$', re.MULTILINE)
-        return pattern.findall(self.tree.tree_string)
+        return pattern.findall(self.tree_object.tree_string)
 
     def check_keyword(self, keyword):
         pattern = re.compile(r'^.*' + keyword + '.*$', re.MULTILINE)
-        return pattern.findall(self.tree.tree_string)
+        return pattern.findall(self.tree_object.tree_string)
 
     def extract_markdown_headers(self, path):
-        content = self.get_file(path)  # Assuming this function exists
+        content = self.get_file(path)  
         headers = re.findall(r'^#+\s*(.*)', content, re.MULTILINE)
         return headers
 
@@ -49,7 +127,7 @@ class Github:
         url = f"https://raw.githubusercontent.com/{self.owner}/{self.repo}/{self.branch}/{path}"
         response = requests.get(url)
         if response.status_code == 200:
-            return response.text  # This is the file content as a string
+            return response.text  
         else:
             print(f"Failed to fetch file: HTTP {response.status_code}")
             return None
@@ -87,42 +165,51 @@ class Github:
             return [] 
 
     def enrich_tree(self): 
-        self.tree.tree = self.enirch(self.tree.tree)
-        self.tree.enriched = True
+        # check if enrched is an attribute of tree_object
+        if not hasattr(self.tree_object, 'enriched'):
+            self.logger.error('Tree has not been fetched yet.')
+            exit() 
+        self.tree_object.enriched = True
+        return self.enrich_tree_attributes(self.tree_object.tree)
 
-    def enirch(self, tree, parent_path=''):
-        tree = tree.copy()
+    def enrich_tree_attributes(self, node):
+        # Initialize counts and sets for the current node
+        num_subfolders, num_subfiles = 0, 0
+        num_files_direct, num_folders_direct = 0, 0
+        file_types = set()
+
+        # Check if the current node has 'children' attribute
+        if 'children' in node:
+            for child in node['children']:
+                if child.get('type') == 'file':
+                    # Update direct file count and types for the current level
+                    num_files_direct += 1
+                    file_extension = child['path'].split('.')[-1]
+                    file_types.add(file_extension)
+                elif child.get('type') == 'folder':
+                    # Recursively enrich child folder and update counts and types
+                    child_subfolders, child_subfiles, child_files_direct, child_folders_direct, child_file_types = self.enrich_tree_attributes(child)
+                    
+                    # Update direct folder count for the current level
+                    num_folders_direct += 1
+                    
+                    # Update cumulative counts with child's counts
+                    num_subfolders += child_subfolders + 1  # Include the child folder itself
+                    num_subfiles += child_subfiles
+                    file_types = file_types.union(child_file_types)
+
+            # Set attributes for the current node
+            node['number_of_subfolders'] = num_subfolders
+            node['number_of_subfiles'] = num_subfiles
+            node['number_of_files'] = num_files_direct
+            node['number_of_folders'] = num_folders_direct
+            node['file_types'] = list(file_types)  # Convert set to list for easier handling
+
+        # Base case for leaf nodes (files)
+        else:
+            # Files don't contribute to folder counts but need to be counted in their parent's file types
+            file_extension = node['path'].split('.')[-1]
+            file_types.add(file_extension)
         
-        tree['path'] = f"{parent_path}/{tree['path']}" if parent_path else tree['path']
-
-        # If this is a file, return its path
-        if 'children' not in tree:
-            return tree
-        else: 
-            tree['type'] = 'folder'
-
-        # This is a folder, so we'll process its children
-        children = []
-        file_paths = []
-        num_subfolders = 0
-        num_subfiles = 0
-        for child in tree.get('children', []):
-            result = self.enirch(child, tree['path'])
-            if result['type'] != 'folder':  # This is a file path
-                file_paths.append(result['path'])
-                num_subfiles += 1
-            else:  # This is a folder
-                num_subfolders += 1
-                num_subfiles += result['number_of_subfiles']  # Add the number of subfiles in the subfolder
-            children.append(result)
-
-        # Extract keywords from the file paths
-        keywords = {file_path: self.extract_code_elements(file_path) for file_path in file_paths}
-
-        # Update the tree
-        tree['children'] = children
-        tree['keywords'] = keywords
-        tree['number_of_subfolders'] = num_subfolders
-        tree['number_of_subfiles'] = num_subfiles
-
-        return tree
+        # Return counts and types for parent nodes to aggregate
+        return num_subfolders, num_subfiles, num_files_direct, num_folders_direct, file_types

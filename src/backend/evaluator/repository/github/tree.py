@@ -3,7 +3,26 @@ import os
 import requests
 import re 
 import streamlit as st
+from backend.tools.logger import LoggerSetup
  
+
+@st.cache_data(ttl=1800, max_entries=1000)
+def get_tree(url): 
+    try: 
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {st.session_state['GITHUB_AUTH_TOKEN']}",
+        }
+    except: 
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {os.environ.get('GITHUB_AUTH_TOKEN')}",
+        }
+
+    response = requests.get(url, headers=headers)
+    return response.json() 
+
+
 class Node:
     def __init__(self, path, node_type):
         self.path = path
@@ -28,9 +47,12 @@ class Node:
         return new_child.find_or_create_path(path_parts)
 
     def to_dict(self):
-        obj = {"path": self.path, "type": self.type}
+        obj = {"path": self.path}
         if self.children: 
             obj["children"] = [child.to_dict() for child in self.children]
+            obj['type'] = 'folder'
+        else: 
+            obj['type'] = 'file'
         return obj
 
     def __del__(self):
@@ -39,9 +61,15 @@ class Node:
 
 class Tree: 
     def __init__(self, **repo_data):
-        self.tree = self.make_tree(**repo_data)  
-        self.tree_string = ""  
-        self.enriched = False  
+        logging_setup = LoggerSetup('Tree')
+        self.logger = logging_setup.get_logger()
+
+        self.logger.info('Initializing Tree object...')
+
+        self.tree = self.make_tree(**repo_data)
+        self.enriched = False
+
+        self.logger.info('Tree object initialized.')
 
     def build_tree(self, json_data):
         if not json_data:
@@ -52,7 +80,10 @@ class Tree:
             path_parts = item["path"].split('/')
             if len(path_parts) > 1:  
                 parent = root.find_or_create_path(path_parts[:-1])
-                parent.add_child(Node(path_parts[-1], "file"))
+                parent.add_child(Node(path_parts[-1], "file")) 
+                # This is wrong lmao, identifying a folder/file is tough because it splits the path by '/'
+                # Just print(path_parts) to see what I mean, you can't identify a file cuz of the different kinds of files 
+                # Ditch this for now, I'm doing some post processing later on in Node.to_dict() 
             else:  
                 root.add_child(Node(item["path"], "file" if item["type"] == "blob" else "folder"))
 
@@ -63,25 +94,10 @@ class Tree:
             json.dump(root.to_dict(), file, ensure_ascii=False, indent=4)
         return 1
 
-    def get_tree(self, url): 
-        try: 
-            headers = {
-                "Accept": "application/vnd.github+json",
-                "Authorization": f"Bearer { st.session_state['GITHUB_AUTH_TOKEN']}",
-            }
-        except: 
-            headers = {
-                "Accept": "application/vnd.github+json",
-                "Authorization": f"Bearer {os.environ.get('GITHUB_AUTH_TOKEN')}",
-            }
-
-        response = requests.get(url, headers=headers)
-        print(response)
-        return response.json() 
-
     def make_tree(self, owner, repo, branch, file_path=None):
         url = f"https://api.github.com/repos/{owner}/{repo}/git/trees/{branch}?recursive=0"
-        root_node = self.build_tree(self.get_tree(f"https://api.github.com/repos/{owner}/{repo}/git/trees/{branch}?recursive=0")) 
+        self.logger.info('Starting to make tree with provided repo data... %s', url)
+        root_node = self.build_tree(get_tree(url)) 
 
         if not root_node:
             return None
@@ -90,32 +106,34 @@ class Tree:
         if file_path: 
             self.serialize_tree_to_file(root_node, file_path)
         del root_node
+
+        self.logger.info('Tree successfully created.')
         return final
 
-    def file_tree_to_string(self, tree, parent_path=''):
+    def file_tree_to_string(self, tree, parent_path='', indent_level=0):
         result = ""
-        if 'children' in tree: 
+        indent_str = '---' * indent_level + '| '
+        if 'children' in tree:
             current_path = f"{parent_path}{tree['path']}/" if tree['path'] else parent_path
+            if indent_level > 0:
+                result += f"{indent_str}{current_path}\n"
             for child in tree['children']:
-                result += self.file_tree_to_string(child, current_path)
+                result += self.file_tree_to_string(child, current_path, indent_level + 1)
         else:
-            current_path = f"{parent_path}{tree['path']}\n"
-            result += current_path
-        print(result)
+            current_path = f"{parent_path}{tree['path']}"
+            result += f"{indent_str}{current_path}\n"
         return result
+
 
     def file_tree_to_string2(self, tree, indent='', depth=0):
         lines = []
 
-        # Add the current node to the lines
         lines.append(f"{indent}{tree['path'].split('/')[-1]}: ")
 
-        # If this is a folder, recursively add its children
         if tree['type'] == 'folder' and depth < 2:
             for child in tree['children']:
                 lines.append(self.file_tree_to_string2(child, indent + '  ', depth + 1))
 
-        # Add the keywords to the lines
         if 'keywords' in tree:
             for file_path, keywords in tree['keywords'].items():
                 if not keywords:
@@ -128,8 +146,7 @@ class Tree:
         
     def __str__(self):
         if self.enriched:
-            self.tree_string = self.file_tree_to_string2(self.tree)
+            return  self.file_tree_to_string2(self.tree)
 
         else: 
-            self.tree_string = self.file_tree_to_string(self.tree)
-        return self.tree_string
+            return self.file_tree_to_string(self.tree)

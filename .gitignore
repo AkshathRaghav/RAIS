@@ -19,3 +19,7 @@ src/.*
 docs/
 logs/
 tmp/
+
+frontend/
+
+depot/

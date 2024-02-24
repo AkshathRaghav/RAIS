@@ -49,15 +49,15 @@
 ## Using the data 
 1. `depot/mapping.json` contains the file_paths of everything related to a project 
 2. `depot/repostory` will contain folders in the form of 
-  - `{owner_name}_{repo_name}`/
-  - `organization`/ -> Induvidual organization data
-  - `members`/ -> All members data across projects
-  - `owner`/ -> Data of owners
+    - `{owner_name}_{repo_name}`/
+    - `organization`/ -> Induvidual organization data
+    - `members`/ -> All members data across projects
+    - `owner`/ -> Data of owners
   The goal was to abstract the metadatas so that they can be queried induviudally and used to avoid unneccessay scraping 
   (I've not implemented that part fully yet, so it will scrape some data pointlessly.)
 3. `depot/paper` will contain folders in the form of 
-  - `{doi}`/
-  - `authors`/ -> Induvidual author metadata 
+    - `{doi}`/
+    - `authors`/ -> Induvidual author metadata 
 
 ## Using the code
 
@@ -66,11 +66,11 @@
     - evaluator/ contains the files for extracting 
     - tools/ contains other files for functions like logging and storing
 3. src/backend/evaluator/github/github.py contains extra code and functions which can be used on a Github object to 
-  - Find any files 
-  - Extract the code of the files from the web 
-  - Extract all the lexical components of python files 
-  - Extract Markdown file headers
-  - etc. 
+    - Find any files 
+    - Extract the code of the files from the web 
+    - Extract all the lexical components of python files 
+    - Extract Markdown file headers
+    - etc. 
   I'm using them for evaluating the pipeline. 
 4. src/backend/evaluator/huggingface is not complete. It can only extract file tree for now. 
 5. src/backend/evaluator/paper gets all the metadata I found important. A lot of the extracted data might be overheads unrelated to a specific project being scraped, but I believe there could be a use for them later. 

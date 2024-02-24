@@ -13,7 +13,8 @@ class Github:
         self.repo = repo
         self.branch = branch
         
-        if (owner, repo, branch) in [(x['owner'], x['repo'], x['branch']) for x in depot.mapping.values() if x]:
+        # Check if the repository has already been processed
+        if (owner, repo, branch) in [(x['owner'].replace('.json', '').replace('../depot/repository/owner/', ''), x['repo'], x['branch']) for x in depot.mapping.values() if x]:
             self.logger.info('Repository already processed. Skipping...')
             return
 
@@ -93,8 +94,8 @@ class Github:
             'metadata': os.path.join(sub_repo_path, 'metadata.json'),
             'commit_history': os.path.join(sub_repo_path, 'commit_history.json'),
             'tree_formatted': os.path.join(sub_repo_path, 'tree_formatted.txt'),
-            'owner': os.path.join(path, 'owner', f'{self.metadata['owner']["name"]}.json'),
-            'organization': os.path.join(path, 'organization', f'{self.metadata['organization']["name"]}.json') if self.metadata['organization'] else None,
+            'owner': os.path.join(path, 'owner', f'{self.metadata["owner"]["name"]}.json'),
+            'organization': os.path.join(path, 'organization', f'{self.metadata["organization"]["name"]}.json') if self.metadata['organization'] else None,
             'members': [os.path.join(path, 'members', f'{member}.json') for member in self.metadata['members']]
         }
             

@@ -3,7 +3,7 @@ import requests
 import json
 import re
 os.environ['PYTHONPATH'] = os.getcwd()
-os.environ['GITHUB_AUTH_TOKEN'] = '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'
+os.environ['GITHUB_AUTH_TOKEN'] = ''
 from backend.evaluator.paper.paper import Paper
 from backend.evaluator.repository.github.github import Github
 from backend.tools.depot import Depot

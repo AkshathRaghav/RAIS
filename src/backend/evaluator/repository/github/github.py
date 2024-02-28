@@ -91,7 +91,7 @@ class Github:
             'repo': self.repo,
             'branch': self.branch,
             'tree': os.path.join(sub_repo_path, 'tree.json'),
-            'metadata': os.path.join(sub_repo_path, 'metadata.json'),
+            'repo_metadata': os.path.join(sub_repo_path, 'metadata.json'),
             'commit_history': os.path.join(sub_repo_path, 'commit_history.json'),
             'tree_formatted': os.path.join(sub_repo_path, 'tree_formatted.txt'),
             'owner': os.path.join(path, 'owner', f'{self.metadata["owner"]["name"]}.json'),

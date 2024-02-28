@@ -67,7 +67,7 @@ class Paper:
 
         return { 
             'paper': os.path.join(sub_path, f'{self.paper.title.replace("/", "_")}.pdf'),
-            'metadata': os.path.join(sub_path, 'metadata.json'),
+            'paper_metadata': os.path.join(sub_path, 'metadata.json'),
             'authors': [os.path.join(path, 'authors', f'{author}.json') for author in self.author_metadata if self.author_metadata[author]]
         }
 

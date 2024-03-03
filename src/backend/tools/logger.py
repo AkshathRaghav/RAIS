@@ -1,6 +1,7 @@
 import logging
 import os
 
+
 class LoggerSetup:
     def __init__(self, name, level=logging.INFO):
         self.logger = logging.getLogger(name)
@@ -18,7 +19,9 @@ class LoggerSetup:
             console_handler.setLevel(self.level)
 
             # Create a formatter and set it for the console handler
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+            )
             console_handler.setFormatter(formatter)
 
             # Add the console handler to the logger

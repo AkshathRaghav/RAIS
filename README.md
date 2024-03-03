@@ -37,10 +37,9 @@ This project will investigate the methodologies to create Reproducible AI Softwa
         ```
 
 ### Installing Dependencies
-5. Install the required Python packages from the `requirements.txt` file:
-    ```bash
-    pip install -r requirements.txt
-    ```
+```bash
+make install
+```
 
 ## Getting Data from Google Cloud
 

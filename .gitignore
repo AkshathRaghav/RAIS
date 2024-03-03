@@ -20,3 +20,5 @@ frontend/
 
 depot/
 *.tar.gz
+
+*.egg-info/

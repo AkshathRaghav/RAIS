@@ -5,20 +5,13 @@ import re
 import streamlit as st
 from backend.tools.logger import LoggerSetup
  
+headers = {
+    "Accept": "application/vnd.github.star+json",
+    "Authorization": f"Bearer {os.environ.get('GITHUB_AUTH_TOKEN')}",
+}
 
 @st.cache_data(ttl=1800, max_entries=1000)
 def get_tree(url): 
-    try: 
-        headers = {
-            "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {st.session_state['GITHUB_AUTH_TOKEN']}",
-        }
-    except: 
-        headers = {
-            "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {os.environ.get('GITHUB_AUTH_TOKEN')}",
-        }
-
     response = requests.get(url, headers=headers)
     return response.json() 
 
@@ -66,10 +59,15 @@ class Tree:
 
         self.logger.info('Initializing Tree object...')
 
-        self.tree = self.make_tree(**repo_data)
+        self.tree = None 
         self.enriched = False
+        self._repo_data = repo_data
 
         self.logger.info('Tree object initialized.')
+    
+    def __call__(self): 
+        self.tree = self.make_tree(**self._repo_data)
+        del self._repo_data
 
     def build_tree(self, json_data):
         if not json_data:
@@ -124,29 +122,6 @@ class Tree:
             result += f"{indent_str}{current_path}\n"
         return result
 
-
-    def file_tree_to_string2(self, tree, indent='', depth=0):
-        lines = []
-
-        lines.append(f"{indent}{tree['path'].split('/')[-1]}: ")
-
-        if tree['type'] == 'folder' and depth < 2:
-            for child in tree['children']:
-                lines.append(self.file_tree_to_string2(child, indent + '  ', depth + 1))
-
-        if 'keywords' in tree:
-            for file_path, keywords in tree['keywords'].items():
-                if not keywords:
-                    continue
-                file_name = file_path.split('/')[-1]
-                keywords = [x for y in keywords.values() for x in y][:10]
-                lines.append(f"{indent}  {file_name}: {', '.join(keywords)}")
-
-        return '\n'.join(lines)
         
     def __str__(self):
-        if self.enriched:
-            return  self.file_tree_to_string2(self.tree)
-
-        else: 
-            return self.file_tree_to_string(self.tree)
+        return self.file_tree_to_string(self.tree)

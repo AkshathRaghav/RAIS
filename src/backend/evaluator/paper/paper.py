@@ -6,36 +6,55 @@ import os, json
 from datetime import datetime
 
 class Paper:
-    def __init__(self, paper_url, depot: Depot):
+    def __init__(self, paper_url, depot: Depot = None):
         logging_setup = LoggerSetup('Paper')
         self.logger = logging_setup.get_logger()
+
         self.paper_url = paper_url
-        if depot.mapping.get(paper_url):
-            self.logger.info('Paper already processed. Skipping...')
-            return
-        self.paper_metadata = None
-        self.author_metadata = None
+        self.depot = depot
+        
+        self.paper_metadata = {}
+        self.author_metadata = {}
         self.paper = None 
+        self.processed = False
+
+        # Pass in None if you don't want to check if the paper has already been processed
+        if depot and depot.load_paper(paper_url):
+            self.logger.info('Paper already processed. Skipping...')
+            self.processed = True
+            return
+
         self.logger.info('Paper object created with URL: %s', paper_url)
     
     def get_paper(self):
         self.logger.info('Extracting paper data...')
-        self.paper_metadata = self.screen_paper(self.paper_url)
+        self.paper_metadata = self.screen_paper()
         self.logger.info('%s extracted.', self.paper_metadata['title'])
         self.author_metadata = {}
         for author in self.paper_metadata['authors']:
             self.logger.info('Processing author: %s', author)
-            try:
-                self.author_metadata[author] = self.stalk_author(author)
-                self.logger.info('%s processed.', author)
+            try: 
+                if self.depot and hasattr(self.depot, self.depot.paper_path) and os.path.exists(os.path.join(self.depot.paper_path, 'authors', f'{author}.json')):
+                    with open(os.path.join(self.depot.paper_path, 'authors', f'{author}.json'), 'r') as file:
+                        self.author_metadata[author] = json.load(file)
+                    self.logger.info('%s already processed.', author)
+                    continuw
+                else:
+                    self.author_metadata[author] = self.stalk_author(author)
+                    self.logger.info('%s processed.', author)
             except Exception as e:
                 self.author_metadata[author] = None
                 self.logger.warning('%s could not be processed. Error: %s', author, e)
         self.logger.info('Extraction and processing completed.')
 
-    def screen_paper(self, url):
-        id = url.split('/')[-1]
-        paper = next(arxiv.Client().results(arxiv.Search(id_list=[id])))
+    def load_paper(self):
+        # Load's the paper from arxiv's API 
+        ## Abstracting for re-use while loading from Depot 
+        paper = self.paper_url.split('/')[-1]
+        return next(arxiv.Client().results(arxiv.Search(id_list=[paper])))
+
+    def screen_paper(self):
+        paper = self.load_paper()
         self.paper = paper
         data = {'title': paper.title, 
                 'authors': [x.name for x in paper.authors], 
@@ -55,19 +74,19 @@ class Paper:
 
         self.logger.info('Saving paper metadata...')
         with open(os.path.join(sub_path, 'metadata.json'), 'w') as file:
-            json.dump(self.paper_metadata, file)
+            json.dump(self.paper_metadata, file, indent=2)
         self.logger.info('Metadata saved.')
 
         self.logger.info('Saving author metadata...')
         for author in self.author_metadata:
             if self.author_metadata[author]:
                 with open(os.path.join(path, 'authors', f'{author}.json'), 'w') as file:
-                        json.dump(self.author_metadata[author], file)
+                        json.dump(self.author_metadata[author], file, indent=2)
             self.logger.info('Author metadata saved.')
 
         return { 
             'paper': os.path.join(sub_path, f'{self.paper.title.replace("/", "_")}.pdf'),
-            'metadata': os.path.join(sub_path, 'metadata.json'),
+            'paper_metadata': os.path.join(sub_path, 'metadata.json'),
             'authors': [os.path.join(path, 'authors', f'{author}.json') for author in self.author_metadata if self.author_metadata[author]]
         }
 

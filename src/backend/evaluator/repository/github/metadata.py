@@ -11,13 +11,13 @@ ROOT_REPO_DATA_SPECS = [
         'name': 'contributors',
         'type': list,
         'data_specs': {
-            'members': {'action': 'count'}, 
-            'member': {'action': 'extract', 'key': 'login'},  
+            'member_count': {'action': 'count'}, 
+            'members': {'action': 'extract', 'key': 'login'},  
         }
     },
     {
         'url': 'https://api.github.com/repos/{org}/{repo}/commits',
-        'name': 'commits',
+        'name': 'commit_history',
         'type': list,
         'data_specs': {
             'commits': {'action': 'count'}, 
@@ -60,6 +60,14 @@ ROOT_REPO_DATA_SPECS = [
         'type': list,
         'data_specs': {
             'prs': {'action': 'count'}
+        }
+    }, 
+    {
+        'url': 'https://api.github.com/repos/{org}/{repo}/stargazers',
+        'name': 'star_history',
+        'type': list,
+        'data_specs': {
+            'star_history': {'action': 'extract', 'key': 'starred_at'},
         }
     }
 ]
@@ -106,29 +114,49 @@ MEMBER_DATA_SPECS = [
     }
 ]
 
+headers = {
+    "Accept": "application/vnd.github.star+json",
+    "Authorization": f"Bearer {os.environ.get('GITHUB_AUTH_TOKEN')}",
+}
 
 class Metadata:
-    def __init__(self, **repo_data):
-        self.repo_data = repo_data
+    def __init__(self, depot, **repo_data):
         logging_setup = LoggerSetup('Metadata')
         self.logger = logging_setup.get_logger()
+
+        self.depot = depot
+        self.repo_data = repo_data
+        self.root_metadata = {}
+        self.organization_metadata = {}
+        self.owner_metadata = {}
+        self.member_metadata = {}
+
         self.logger.info('Metadata object created')
 
-    def agenerate(self): 
+    def agenerate(self, level): 
         self.logger.info('Generating root metadata...')
         self.root_metadata = self.get_root_metadata()
-        yield self.root_metadata, 'metadata'
+        yield self.root_metadata, 'root'
         self.logger.info('Root metadata generated.')
+
+        if level == 'root': 
+            return 
 
         self.logger.info('Generating organization metadata...')
         self.organization_metadata = self.get_organization_metadata()
         yield self.organization_metadata, 'organization'
         self.logger.info('Organization metadata generated.')
 
+        if level == 'organization': 
+            return 
+
         self.logger.info('Generating owner metadata...')
         self.owner_metadata = self.get_owner_metadata()
         yield self.owner_metadata, 'owner'
         self.logger.info('Owner metadata generated.')
+
+        if level == 'owner': 
+            return 
 
         self.logger.info('Generating member metadata...')
         self.member_metadata = self.get_member_metadata() 
@@ -137,15 +165,29 @@ class Metadata:
 
     def get_root_metadata(self):
         self.logger.info('Processing root metadata...')
-        return self.process_repo_data(ROOT_REPO_DATA_SPECS, org=self.repo_data['owner'], repo=self.repo_data['repo'])
+        val = self.process_repo_data(ROOT_REPO_DATA_SPECS, org=self.repo_data['owner'], repo=self.repo_data['repo'])
+        val['commit_history'] = [
+                list(x) for x in 
+                zip(
+                    val['commit_name'], 
+                    val['commit_date']
+                    )
+            ]
+        
+        return  {key: val[key] for key in val if key not in ['commit_name', 'commit_date']}
 
     def get_organization_metadata(self):
         if self.root_metadata['organization']:
-            self.logger.info('Processing organization metadata...')
-            organization_metadata = {}
-            organization_metadata['name'] = self.root_metadata['organization']
-            organization_metadata.update(self.process_repo_data(MEMBER_DATA_SPECS, user=self.root_metadata['organization']))
-            organization_metadata['metadata'] = self.process_user_repo_data(organization_metadata['repos'], 1)
+            if self.depot and hasattr(self.depot, 'repo_path') and os.path.exists(os.path.join(self.depot.repo_path, 'organization', f'{self.root_metadata["organization"]}.json')):
+                with open(os.path.join(self.depot.repo_path, 'organization', f'{self.root_metadata["organization"]}.json'), 'r') as file:
+                    organization_metadata = json.load(file)
+                self.logger.info('Organization metadata already processed: %s', self.root_metadata['organization'])
+            else: 
+                self.logger.info('Processing organization metadata...')
+                organization_metadata = {}
+                organization_metadata['name'] = self.root_metadata['organization']
+                organization_metadata.update(self.process_repo_data(MEMBER_DATA_SPECS, user=self.root_metadata['organization']))
+                organization_metadata['metadata'] = self.process_user_repo_data(organization_metadata['repos'], 1)
             return organization_metadata
         else: 
             self.logger.info('Repo not affiliated with Organization...')
@@ -155,9 +197,14 @@ class Metadata:
         self.logger.info('Processing owner metadata...')
         owner_metadata = {}
         if self.root_metadata['owner_type'] != 'Organization':
-            owner_metadata['name'] = self.root_metadata['owner']
-            owner_metadata.update(self.process_repo_data(MEMBER_DATA_SPECS, user=self.root_metadata['owner']))
-            owner_metadata['metadata'] = self.process_user_repo_data(owner_metadata['repos'], 1)
+            if self.depot and hasattr(self.depot, 'repo_path') and os.path.exists(os.path.join(self.depot.repo_path, 'owner', f'{self.root_metadata["owner"]}.json')):
+                with open(os.path.join(self.depot.repo_path, 'owner', f'{self.root_metadata["owner"]}.json'), 'r') as file:
+                    owner_metadata = json.load(file)
+                self.logger.info('Owner metadata already processed: %s', self.root_metadata['owner'])
+            else: 
+                owner_metadata['name'] = self.root_metadata['owner']
+                owner_metadata.update(self.process_repo_data(MEMBER_DATA_SPECS, user=self.root_metadata['owner']))
+                owner_metadata['metadata'] = self.process_user_repo_data(owner_metadata['repos'], 1)
         else: 
             owner_metadata = self.organization_metadata
         return owner_metadata
@@ -165,15 +212,20 @@ class Metadata:
     def get_member_metadata(self):
         self.logger.info('Processing member metadata...')
         member_metadata = {}
-        if int(self.root_metadata['members']) > 30: 
+        if int(self.root_metadata['member_count']) > 30: 
             self.logger.warning('Upperbound Threshold (30+ Members) Reached')
             member_metadata['error'] = 'Upperbound Threshold (30+ Members) Reached'
             return member_metadata
 
-        for member in self.root_metadata['member'][:31]:  # Assuming 'member' should be 'members'
+        for member in self.root_metadata['members'][:31]: 
             try:
-                member_metadata[member] = self.process_repo_data(MEMBER_DATA_SPECS, user=member)
-                self.logger.info('Processed metadata for member: %s', member)
+                if self.depot and hasattr(self.depot, 'repo_path') and os.path.exists(os.path.join(self.depot.repo_path, 'member', f'{member}.json')):
+                    with open(os.path.join(self.depot.repo_path, 'member', f'{member}.json'), 'r') as file:
+                        member_metadata[member] = json.load(file)
+                    self.logger.info('Member metadata already processed: %s', member)
+                else: 
+                    member_metadata[member] = self.process_repo_data(MEMBER_DATA_SPECS, user=member)
+                    self.logger.info('Processed metadata for member: %s', member)
             except Exception as e:
                 self.logger.error('Error processing member %s: %s', member, e)
                 member_metadata[member] = None
@@ -215,17 +267,6 @@ class Metadata:
     def fetch_git_api(self, url):
         self.logger.info('Fetching %s', url)
         try: 
-            try: 
-                headers = {
-                    "Accept": "application/vnd.github+json",
-                    "Authorization": f"Bearer {st.session_state['GITHUB_AUTH_TOKEN']}",
-                }
-            except: 
-                headers = {
-                    "Accept": "application/vnd.github+json",
-                    "Authorization": f"Bearer {os.environ.get('GITHUB_AUTH_TOKEN')}",
-                }
-
             for _ in range(3):  # Retry up to 3 times
                 try:
                     time.sleep(0.25)
@@ -237,7 +278,7 @@ class Metadata:
                         return None
                 except requests.exceptions.Timeout:
                     self.logger.error('Timeout occurred while fetching %s. Retrying in 15 seconds...', url)
-                    time.sleep(15)  # Wait for 15 seconds before retrying
+                    time.sleep(15) 
             self.logger.error('Failed to fetch %s after 3 attempts', url)
             return None
         except Exception as e: 
@@ -245,17 +286,6 @@ class Metadata:
             return None
 
     def process_repo_data(self, repo_data_specs, **formattable_vars):
-        try: 
-            headers = {
-                "Accept": "application/vnd.github+json",
-                "Authorization": f"Bearer {st.session_state['GITHUB_AUTH_TOKEN']}",
-            }
-        except: 
-            headers = {
-                "Accept": "application/vnd.github+json",
-                "Authorization": f"Bearer {os.environ.get('GITHUB_AUTH_TOKEN')}",
-            }
-
         results = {
             'error': {},
             'empty': []
@@ -265,6 +295,7 @@ class Metadata:
             url = spec['url'].format(**formattable_vars)
             
             if spec['type'] == list: 
+                # Enabling pagination scraping 
                 i = 1
                 url += "?state=all&page={i}&per_page=100"
 
@@ -278,6 +309,7 @@ class Metadata:
                 response = self.fetch_git_api(url.format(i=i))
 
                 if not response:
+                    # Initial fetch failed; skip to next spec; add to log
                     if 'empty' in results:
                         results['empty'] += [spec['name']]
                     else: 
@@ -294,7 +326,9 @@ class Metadata:
                             else:
                                 results[tag] += [self.extract_key(response, detail['key'])]
 
-                        if i == 100 and tag in results: 
+                        # Disable an upperbound for certain keys
+                        ## Ensure that tag (detail['key']) exists 
+                        if spec['name'] not in ['star_history'] and i == 100 and tag in results: 
                             results['error'][tag] = f'Upperbound Threshold (10k+) Reached'
 
                     i += 1

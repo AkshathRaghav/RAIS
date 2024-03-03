@@ -1,8 +1,13 @@
 # Reproducible Artificial Intelligence Software 
 
 <div align="center">
-  <img src="https://drive.google.com/thumbnail?id=1rz_bIpkFOfe4uZ2AKzwq29Am9wC6YFOv&sz=w1000" alt="maskformer" style="width: 80%;"/>
+  <img src="https://drive.google.com/thumbnail?id=1rz_bIpkFOfe4uZ2AKzwq29Am9wC6YFOv&sz=h2000" alt="maskformer" style="width: 80%;"/>
+  <p>This repository contains the source code being used in the RAIS project under the CVES group at Purdue. The code analyzes and extracts data from Arxiv, Scholarly, Github, HuggingFace and Pytorch as specified in the <a href='https://drive.google.com/thumbnail?id=1rz_bIpkFOfe4uZ2AKzwq29Am9wC6YFOv&sz=h2000'>pipeline</a> above.</p>
 </div>
+
+
+# Overview 
+This project will investigate the methodologies to create Reproducible AI Software (called **RAIS**). This project will identify a list of essential factors that may contribute (or hurt) reproducibility. Based on this list, RAIS will evaluate reproducibility by examining software repositories and their history to detect the events when software’s reproducibility start declining and issue alerts. RAIS will use large language models (LLMs) to analyze documentations, comments, source code, and reports in order to understand the contents, validate consistency, and suggest improvements. 
 
 ## Getting Started
 
@@ -40,14 +45,20 @@
 ## Getting Data from Google Cloud
 
 ### Downloading the Data
-6. Locate the [depot/](https://drive.google.com/drive/folders/1-p7hZDR00mWtLYiR2zxYTQiNcLH1JBlZ) folder under 'Akshath Raghav R'/. Download it as a zipped file. 
-7. Extract it using: 
+- Locate the [depot/](https://drive.google.com/drive/folders/1-p7hZDR00mWtLYiR2zxYTQiNcLH1JBlZ) folder. Download it as a zipped file. 
+  Extract it using: 
   ```bash 
   unzip depot.zip 'depot/*' -d .        
   ```
+<b>OR</b>
+- Download the [.tar.gz](). 
+  Extract it using: 
+  ```bash 
+  tar -xzvf depot.tar.gz 
+  ```
 
-## Using the data 
-Follow this repository structure: 
+## Data Overview
+The extracted depot follows this structure. If you do not want to use the data above, you can initialize it using the Depot class. More information below. 
 ```
   # - depot/
   #   - papers/
@@ -57,19 +68,47 @@ Follow this repository structure:
   #     - organization/ 
   #     - member/
 ```
-1. `depot/mapping.json` contains the file_paths of everything related to a project 
+(The goal was to enable abstractability of previously scraped data!)
+
+1. `depot/mapping.json` contains the file_paths of everything related to an ML project
+```json
+  {
+    "https://arxiv.org/abs/2305.19256": {
+      "paper": "../depot/papers/2305.19256/Ambient Diffusion: Learning Clean Distributions from Corrupted Data.pdf",
+      "paper_metadata": "../depot/papers/2305.19256/metadata.json",
+      "authors": [
+        "../depot/papers/authors/Giannis Daras.json",
+        "../depot/papers/authors/Kulin Shah.json",
+        "../depot/papers/authors/Yuval Dagan.json",
+        "../depot/papers/authors/Aravind Gollakota.json",
+        "../depot/papers/authors/Alexandros G. Dimakis.json",
+        "../depot/papers/authors/Adam Klivans.json"
+      ]
+    },
+    "giannisdaras/ambient-diffusion": {
+      "branch": "main",
+      "tree": "../depot/repository/giannisdaras_ambient-diffusion/tree.json",
+      "repo_metadata": "../depot/repository/giannisdaras_ambient-diffusion/metadata.json",
+      "commit_history": "../depot/repository/giannisdaras_ambient-diffusion/commit_history.json",
+      "star_history": "../depot/repository/giannisdaras_ambient-diffusion/star_history.json",
+      "tree_formatted": "../depot/repository/giannisdaras_ambient-diffusion/tree_formatted.txt",
+      "owner_metadata": "../depot/repository/owner/giannisdaras.json",
+      "organization_metadata": null,
+      "members_metadata": []
+    }
+  },
+  ....
+```
 2. `depot/repostory` will contain folders in the form of 
     - `{owner_name}_{repo_name}`/
     - `organization`/ -> Induvidual organization data
     - `members`/ -> All members data across projects
     - `owner`/ -> Data of owners
-  The goal was to abstract the metadatas so that they can be queried induviudally and used to avoid unneccessay scraping 
-  (I've not implemented that part fully yet, so it will scrape some data pointlessly.)
 3. `depot/paper` will contain folders in the form of 
     - `{doi}`/
     - `authors`/ -> Induvidual author metadata 
 
-## Using the code
+## Codebase Overview
 
 1. Under `src/`, I've listed some testing files under `experiment.*` alias. You can use those to get started. 
 2. Under `src/backend/`, I've modularized the component files.
@@ -84,3 +123,4 @@ Follow this repository structure:
   I'm using them for evaluating the pipeline. 
 4. `src/backend/evaluator/huggingface` is not complete. It can only extract file tree for now. 
 5. `src/backend/evaluator/paper` gets all the metadata I found important. A lot of the extracted data might be overheads unrelated to a specific project being scraped, but I believe there could be a use for them later. 
+

@@ -19,3 +19,4 @@ assets/
 frontend/
 
 depot/
+*.tar.gz

@@ -1,7 +1,8 @@
-from pydantic import BaseModel, PrivateAttr, Field
-from typing import List, ForwardRef, Dict, Optional
-from enum import Enum
 import os
+from enum import Enum
+from typing import Dict, ForwardRef, List, Optional
+
+from pydantic import BaseModel, Field, PrivateAttr
 
 NodeRef = ForwardRef("NodeRef")
 
@@ -23,10 +24,10 @@ Node class for Tree
 class Node(BaseModel):
     path: str  # unique identifier for the folder / file that this node represents
     type: NodeTypeEnum = Field  #
-    parent: Optional['None'] = None  # if parent is None: at the root.
-    children: Dict[str, 'Node'] = {}  # if len(children) is 0, node is a leaf.
+    parent: Optional["None"] = None  # if parent is None: at the root.
+    children: Dict[str, "Node"] = {}  # if len(children) is 0, node is a leaf.
 
-    def add_child(self, path: str, child: 'Node') -> 'Node':
+    def add_child(self, path: str, child: "Node") -> "Node":
         if path:
             child: Node
             # does the next child node already exist
@@ -52,10 +53,10 @@ class Node(BaseModel):
         else:
             obj["type"] = "file"
         return obj
+
+
 if __name__ == "__main__":
-    root = Node("/Users/ronnatarajan/PycharmProjects/RAIS/venv/bin/python",
-        type = NodeTypeEnum.directory
-    )
+    root = Node("/Users/ronnatarajan/PycharmProjects/RAIS/venv/bin/python", type=NodeTypeEnum.directory)
 
 """
 # get parts of path

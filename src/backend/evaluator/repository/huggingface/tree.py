@@ -1,10 +1,12 @@
+import json
+
 from huggingface_hub import HfApi
-import json 
+
 
 class Node:
     def __init__(self, path, node_type):
         self.path = path
-        self.type = node_type  
+        self.type = node_type
         self.children = []
 
     def add_child(self, child):
@@ -29,38 +31,37 @@ class Node:
         if self.children:
             obj["children"] = [child.to_dict() for child in self.children]
         return obj
-    
+
     def __del__(self):
         for child in self.children:
             del child
 
-class Tree: 
+
+class Tree:
     def __init__(self, **repo_data):
         self.tree = self.make_tree(**repo_data)
-    
 
     def build_tree_from_paths(self, paths):
         root = Node(path="", node_type="folder")
-        
+
         for path in paths:
-            path_parts = path.split('/')
+            path_parts = path.split("/")
             root.find_or_create_path(path_parts)
-        
+
         return root
 
     def serialize_tree_to_file(self, root, file_path):
-        with open(file_path, 'w', encoding='utf-8') as file:
+        with open(file_path, "w", encoding="utf-8") as file:
             json.dump(root.to_dict(), file, ensure_ascii=False, indent=4)
 
-    def get_tree(self, repo_name): 
+    def get_tree(self, repo_name):
         api = HfApi()
         return api.list_repo_files(repo_name)
 
     def make_tree(self, repo, file_path=None):
-        root_node = build_tree_from_paths(get_tree(repo)) 
+        root_node = build_tree_from_paths(get_tree(repo))
 
         if not file_path:
             return root_node.to_dict()
-        else: 
+        else:
             serialize_tree_to_file(root_node, file_path)
-

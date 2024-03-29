@@ -131,20 +131,28 @@ class Github:
         self.metadata_object = Metadata(depot=self.depot, owner=self.owner, repo=self.repo)
         return self.metadata_object.agenerate(level)
 
-    def find_files(self, path):
+    def find_files_by_suffix(self, path):
         pattern = re.compile(r"^.*\{path}$".format(path=path), re.MULTILINE)
         return [file.replace("-", "").replace("|", "").strip() for file in pattern.findall(str(self.tree_object))]
 
-    def check_keyword(self, keyword):
+    def find_files(self, keyword):
+        keyword = keyword.lower() 
         pattern = re.compile(r"^.*" + keyword + ".*$", re.MULTILINE)
-        return [file.replace("-", "").replace("|", "").strip() for file in pattern.findall(str(self.tree_object))]
+        return [file.replace("-", "").replace("|", "").strip() for file in pattern.findall(str(self.tree_object).lower())]
+
+    def extract_markdown_code_elements(self, path):
+        content = self.load_file(path)
+        code_blocks = re.findall(r"```.*?```", content, re.DOTALL)
+        code_blocks = [re.sub(r"```.*?\n", "", code) for code in code_blocks]
+        code_blocks = [code.strip() for code in code_blocks]
+        return code_blocks
 
     def extract_markdown_headers(self, path):
-        content = self.get_file(path)
+        content = self.load_file(path)
         headers = re.findall(r"^#+\s*(.*)", content, re.MULTILINE)
         return headers
 
-    def get_file(self, path):
+    def load_file(self, path):
         url = f"https://raw.githubusercontent.com/{self.owner}/{self.repo}/{self.branch}/{path}"
         response = requests.get(url)
         if response.status_code == 200:
@@ -155,7 +163,7 @@ class Github:
 
     def extract_code_elements(self, file_path):
         if file_path.endswith(".py"):
-            file_raw = self.get_file(file_path)
+            file_raw = self.load_file(file_path)
 
             # Extract function names
             function_pattern = r"\bdef\b\s+(\w+)\("

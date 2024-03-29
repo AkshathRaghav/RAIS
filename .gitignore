@@ -22,3 +22,9 @@ depot/
 *.tar.gz
 
 *.egg-info/
+
+build/
+data/
+.env
+*.env
+

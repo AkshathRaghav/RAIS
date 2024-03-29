@@ -19,6 +19,7 @@ dev_requirements = [ir for ir in parse_requirements("requirements_dev.txt")]
 setup(
     name="RAIS",
     version="0.1.0",
+
     author="Purdue RAIS",
     author_email="yunglu@purdue.edu",
     description="Tool to analyze the reproducibility of Artificial Intelligence Research",
@@ -36,4 +37,5 @@ setup(
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
     python_requires=">=3.9",
+
 )

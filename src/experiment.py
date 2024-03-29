@@ -1,12 +1,12 @@
 import json
 import os
 import re
-
 import requests
 
 os.environ["PYTHONPATH"] = "/".join(os.getcwd().split("/")[:-1]) + "/src/"
 print(os.environ["PYTHONPATH"])
 os.environ["GITHUB_AUTH_TOKEN"] = "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"
+
 from backend.evaluator.paper.paper import Paper
 from backend.evaluator.repository.github.github import Github
 from backend.tools.depot import Depot

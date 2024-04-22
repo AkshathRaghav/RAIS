@@ -11,13 +11,25 @@ from backend.tools.logger import LoggerSetup
 
 
 class Github:
-    def __init__(self, owner, repo, branch, depot: Depot = None):
+    def __init__(self, owner, repo, branch=None, depot: Depot = None):
         logging_setup = LoggerSetup("Github")
         self.logger = logging_setup.get_logger()
 
         self.owner = owner
         self.repo = repo
-        self.branch = branch
+
+        if not branch: 
+            try: 
+                response = requests.get(f"https://api.github.com/repos/{owner}/{repo}", headers={
+                            "Accept": "application/vnd.github.star+json", 
+                            "Authorization": f"Bearer {os.environ.get('GITHUB_AUTH_TOKEN')}",
+                        })
+                self.branch = response.json()["default_branch"]
+            except: 
+                self.logger.error("Branch not provided. Defaulting to 'main'")
+                self.branch = "main"
+        else: 
+            self.branch = branch
 
         self.tree_object = Tree(repo=None)  # Placeholder for loading; gets initialized in self.get_tree() when scraping
         self.metadata_object = Metadata(depot=None, owner=None, repo=None)
@@ -48,7 +60,7 @@ class Github:
                 key: value
                 for key, value in self.metadata_object.root_metadata.items()
                 if key not in ["commit_history", "star_history"]
-            },
+            }
         }
 
     def __str__(self):
@@ -136,9 +148,8 @@ class Github:
         return [file.replace("-", "").replace("|", "").strip() for file in pattern.findall(str(self.tree_object))]
 
     def find_files(self, keyword):
-        keyword = keyword.lower() 
         pattern = re.compile(r"^.*" + keyword + ".*$", re.MULTILINE)
-        return [file.replace("-", "").replace("|", "").strip() for file in pattern.findall(str(self.tree_object).lower())]
+        return [file.replace("-", "").replace("|", "").strip() for file in pattern.findall(str(self.tree_object))]
 
     def extract_markdown_code_elements(self, path):
         content = self.load_file(path)
@@ -154,6 +165,7 @@ class Github:
 
     def load_file(self, path):
         url = f"https://raw.githubusercontent.com/{self.owner}/{self.repo}/{self.branch}/{path}"
+        print(url)
         response = requests.get(url)
         if response.status_code == 200:
             return response.text
@@ -233,6 +245,9 @@ class Github:
         return self.enrich_tree_attributes(self.tree_object.tree)
 
     def enrich_tree_attributes(self, node):
+        if not node:
+            return 0, 0, 0, 0, set()
+            
         num_subfolders, num_subfiles = 0, 0
         num_files_direct, num_folders_direct = 0, 0
         file_types = set()

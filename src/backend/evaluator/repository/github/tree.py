@@ -7,16 +7,17 @@ import streamlit as st
 
 from backend.tools.logger import LoggerSetup
 
-headers = {
-    "Accept": "application/vnd.github.star+json",
-    "Authorization": f"Bearer {os.environ.get('GITHUB_AUTH_TOKEN')}",
-}
 
-
-@st.cache_data(ttl=1800, max_entries=1000)
 def get_tree(url):
-    response = requests.get(url, headers=headers)
-    return response.json()
+    response = requests.get(url, headers={
+        "Accept": "application/vnd.github.star+json", 
+        "Authorization": f"Bearer {os.environ.get('GITHUB_AUTH_TOKEN')}",
+    })
+    try: 
+        return response.json()
+    except requests.exceptions.JSONDecodeError:
+        return None 
+
 
 
 class Node:
@@ -78,6 +79,9 @@ class Tree:
             return None
         root = Node(path="", node_type="folder")
 
+        if "tree" not in json_data:
+            return None 
+
         for item in json_data["tree"]:
             path_parts = item["path"].split("/")
             if len(path_parts) > 1:
@@ -113,6 +117,8 @@ class Tree:
         return final
 
     def file_tree_to_string(self, tree, parent_path="", indent_level=0):
+        if not tree:
+            return ""
         result = ""
         indent_str = "---" * indent_level + "| "
         if "children" in tree:

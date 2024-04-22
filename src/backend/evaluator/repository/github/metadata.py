@@ -114,11 +114,6 @@ MEMBER_DATA_SPECS = [
     },
 ]
 
-headers = {
-    "Accept": "application/vnd.github.star+json",
-    "Authorization": f"Bearer {os.environ.get('GITHUB_AUTH_TOKEN')}",
-}
-
 
 class Metadata:
     def __init__(self, depot, **repo_data):
@@ -172,7 +167,7 @@ class Metadata:
         return {key: val[key] for key in val if key not in ["commit_name", "commit_date"]}
 
     def get_organization_metadata(self):
-        if self.root_metadata["organization"]:
+        if self.root_metadata and 'organization' in self.root_metadata:
             if (
                 self.depot
                 and hasattr(self.depot, "repo_path")
@@ -202,7 +197,7 @@ class Metadata:
     def get_owner_metadata(self):
         self.logger.info("Processing owner metadata...")
         owner_metadata = {}
-        if self.root_metadata["owner_type"] != "Organization":
+        if "owner" in self.root_metadata and self.root_metadata["owner_type"] != "Organization":
             if (
                 self.depot
                 and hasattr(self.depot, "repo_path")
@@ -285,7 +280,10 @@ class Metadata:
             for _ in range(3):  # Retry up to 3 times
                 try:
                     time.sleep(0.25)
-                    response = requests.get(url, headers=headers, timeout=5)  # 5 seconds timeout
+                    response = requests.get(url, headers={
+                            "Accept": "application/vnd.github.star+json", 
+                            "Authorization": f"Bearer {os.environ.get('GITHUB_AUTH_TOKEN')}",
+                        }, timeout=5)  # 5 seconds timeout
                     if response.status_code == 200:
                         return response.json()
                     else:
@@ -328,7 +326,7 @@ class Metadata:
                         results["empty"] = [spec["name"]]
                     response = []
 
-                while len(response) and i <= 100:
+                while response and i <= 100:
                     for tag, detail in spec["data_specs"].items():
                         if detail["action"] == "count":
                             results[tag] += self.count(response)
@@ -340,7 +338,7 @@ class Metadata:
 
                         # Disable an upperbound for certain keys
                         ## Ensure that tag (detail['key']) exists
-                        if spec["name"] not in ["star_history"] and i == 100 and tag in results:
+                        if spec["name"] not in ["star_history", "followers"] and i == 100 and tag in results:
                             results["error"][tag] = f"Upperbound Threshold (10k+) Reached"
 
                     i += 1
@@ -373,7 +371,7 @@ class Metadata:
         count_repo_metadata = {"error": {}, "empty": {}}
 
         if type == 1:
-            count = 100
+            count = -1
         else:
             count = 50
 
@@ -397,7 +395,7 @@ class Metadata:
                     count_repo_metadata[key] += temp[key]
             # print(count_repo_metadata)
 
-        if len(repos) > count:
+        if count != -1 and len(repos) > count:
             count_repo_metadata["error"] = f"Upperbound Threshold ({str(count)}+ Repos) Reached"
             self.logger.warning(f"Upperbound Threshold ({str(count)}+ Repos) Reached")
             return count_repo_metadata

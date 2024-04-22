@@ -25,6 +25,8 @@ depot/
 
 build/
 data/
+
+.env
 .env
 *.env
 

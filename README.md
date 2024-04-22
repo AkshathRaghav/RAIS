@@ -2,12 +2,12 @@
 
 <div align="center">
   <img src="https://drive.google.com/thumbnail?id=1rz_bIpkFOfe4uZ2AKzwq29Am9wC6YFOv&sz=h2000" alt="maskformer" style="width: 80%;"/>
-  <p>This repository contains the source code being used in the RAIS project under the CVES group at Purdue. The code analyzes and extracts data from Arxiv, Scholarly, Github, HuggingFace and Pytorch as specified in the <a href='https://drive.google.com/thumbnail?id=1rz_bIpkFOfe4uZ2AKzwq29Am9wC6YFOv&sz=h2000'>pipeline</a> above.</p>
+  <p>This repository contains the source code I wrote for the RAIS project at the CVES group under [Prof. Lu](https://yhlu.net/). It was used in my report [here](https://akshathraghav.github.io/projects/rais/).</p>
 </div>
 
 
 # Overview 
-This project will investigate the methodologies to create Reproducible AI Software (called **RAIS**). This project will identify a list of essential factors that may contribute (or hurt) reproducibility. Based on this list, RAIS will evaluate reproducibility by examining software repositories and their history to detect the events when software’s reproducibility start declining and issue alerts. RAIS will use large language models (LLMs) to analyze documentations, comments, source code, and reports in order to understand the contents, validate consistency, and suggest improvements. 
+This project aimed to investigate the methodologies to create Reproducible AI Software (called **RAIS**). This project will identify a list of essential factors that may contribute (or hurt) reproducibility. Based on this list, RAIS will evaluate reproducibility by examining software repositories and their history to detect the events when software’s reproducibility start declining and issue alerts. RAIS will use large language models (LLMs) to analyze documentations, comments, source code, and reports in order to understand the contents, validate consistency, and suggest improvements. 
 
 ## Getting Started
 

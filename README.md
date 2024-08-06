@@ -2,7 +2,7 @@
 
 <div align="center">
   <img src="https://drive.google.com/thumbnail?id=1rz_bIpkFOfe4uZ2AKzwq29Am9wC6YFOv&sz=h2000" alt="maskformer" style="width: 80%;"/>
-  <p>This repository contains the source code I wrote for the RAIS project at the CVES group under [Prof. Lu](https://yhlu.net/). It was used in my report [here](https://akshathraghav.github.io/projects/rais/).</p>
+  <p>This repository contains the source code I wrote for the RAIS project at the CVES group under <a href="https://yhlu.net/">Prof. Lu</a>. It was used in my report <a href="https://akshathraghav.github.io/projects/rais/">here</a>.</p>
 </div>
 
 
@@ -44,13 +44,13 @@ make install
 ## Getting Data from Google Cloud
 
 ### Downloading the Data
-- Locate the [depot/](https://drive.google.com/drive/folders/1-p7hZDR00mWtLYiR2zxYTQiNcLH1JBlZ) folder. Download it as a zipped file. 
+- Locate the [depot/](https://drive.google.com/drive/folders/16YOiCpr9M6euwvx9Rkss8Ty8XI_-rjeo?usp=sharing) folder. Download it as a zipped file. 
   Extract it using: 
   ```bash 
   unzip depot.zip 'depot/*' -d .        
   ```
 <b>OR</b>
-- Download the [.tar.gz](). 
+- Download the [.tar.gz](https://drive.google.com/file/d/13-wutIIh551WcapTbeXWz2lHPlFK7o5d/view?usp=sharing). 
   Extract it using: 
   ```bash 
   tar -xzvf depot.tar.gz 
